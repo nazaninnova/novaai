@@ -16,6 +16,9 @@ jobs:
       - name: نصب پیش‌نیازهای سیستمی
         run: |
           sudo apt-get update
+
+# test trigger
+          
           sudo apt-get install -y git zip unzip openjdk-17-jdk python3-pip \
             autoconf libtool pkg-config cmake build-essential
 
