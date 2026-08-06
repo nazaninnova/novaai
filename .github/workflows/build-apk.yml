@@ -1,5 +1,4 @@
 name: Build Nova AI APK
-#trigger
 # هر بار که کد رو push کنید، یا دستی از تب Actions اجرا کنید
 on:
   push:
