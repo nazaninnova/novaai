@@ -1,0 +1,63 @@
+name: Build Nova AI APK
+
+# هر بار که کد رو push کنید، یا دستی از تب Actions اجرا کنید
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout کد
+        uses: actions/checkout@v4
+
+      - name: نصب پیش‌نیازهای سیستمی
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git zip unzip openjdk-17-jdk python3-pip \
+            autoconf libtool pkg-config cmake build-essential
+
+      - name: دانلود و نصب Android NDK
+        run: |
+          wget -q https://dl.google.com/android/repository/android-ndk-r27d-linux.zip
+          unzip -q android-ndk-r27d-linux.zip
+          echo "ANDROID_NDK=$GITHUB_WORKSPACE/android-ndk-r27d" >> $GITHUB_ENV
+
+      - name: کلون و کراس‌کامپایل llama.cpp (arm64-v8a)
+        run: |
+          git clone --depth 1 https://github.com/ggml-org/llama.cpp.git
+          cd llama.cpp
+          cmake -B build-arm64 \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24 \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-arm64 --target llama-server -j$(nproc)
+
+      - name: کراس‌کامپایل llama.cpp (armeabi-v7a)
+        run: |
+          cd llama.cpp
+          cmake -B build-armv7 \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=armeabi-v7a -DANDROID_PLATFORM=android-24 \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-armv7 --target llama-server -j$(nproc)
+
+      - name: قرار دادن باینری‌ها در محل درست پروژه
+        run: |
+          mkdir -p libs/arm64-v8a libs/armeabi-v7a
+          cp llama.cpp/build-arm64/bin/llama-server libs/arm64-v8a/libllama_server.so
+          cp llama.cpp/build-armv7/bin/llama-server libs/armeabi-v7a/libllama_server.so
+
+      - name: نصب Buildozer
+        run: pip install buildozer cython
+
+      - name: بیلد APK
+        run: buildozer android debug
+
+      - name: آپلود APK به‌عنوان خروجی قابل‌دانلود
+        uses: actions/upload-artifact@v4
+        with:
+          name: NovaAI-debug-apk
+          path: bin/*.apk
