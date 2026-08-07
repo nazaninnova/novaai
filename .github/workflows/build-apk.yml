@@ -37,7 +37,7 @@ jobs:
           cp llama.cpp/build-arm64/bin/llama-server libs/arm64-v8a/libllama_server.so
 
       - name: نصب Buildozer
-        run: pip install buildozer cython
+        run: pip install buildozer==1.5.0 "cython<3.0"
 
       - name: بیلد APK
         run: |
